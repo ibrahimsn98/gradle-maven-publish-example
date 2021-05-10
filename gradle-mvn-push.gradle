@@ -1,0 +1,56 @@
+import java.text.SimpleDateFormat
+
+apply plugin: 'maven-publish'
+apply from: "$rootDir/properties-util.gradle"
+
+static def isReleaseBuild() {
+    // return true if it is a release build
+    return false
+}
+
+static def createVersionName(String versionName) {
+    if (isReleaseBuild()) {
+        return versionName
+    } else {
+        return versionName + "-" + new SimpleDateFormat("ddMMyy.hhmm").format(new Date())
+    }
+}
+
+publishing {
+    publications {
+        android.libraryVariants.all { variant ->
+            if ((isReleaseBuild() && variant.name.contains("release")) || (!isReleaseBuild() && !variant.name.contains("release"))) {
+                variant.outputs.each { output ->
+                    "${variant.name}"(MavenPublication) {
+                        groupId "me.ibrahimsn.lib"
+                        artifactId "lib"
+                        version createVersionName("1.0.0") // your version name
+                        artifact "${output.outputFile}"
+
+                        pom.withXml {
+                            def dependencies = asNode().appendNode('dependencies')
+                            configurations.getByName("${variant.name}CompileClasspath").getResolvedConfiguration().getFirstLevelModuleDependencies().each {
+                                def dependency = dependencies.appendNode('dependency')
+                                dependency.appendNode('groupId', it.moduleGroup)
+                                dependency.appendNode('artifactId', it.moduleName)
+                                dependency.appendNode('version', it.moduleVersion)
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+    repositories {
+        maven {
+            url "https://gitlab.com/api/v4/projects/ * your project id * /packages/maven"
+            credentials(HttpHeaderCredentials) {
+                name = "Private-Token"
+                value = getPropertyValue("local.properties", "gitLab.token")
+            }
+            authentication {
+                header(HttpHeaderAuthentication)
+            }
+        }
+    }
+}
