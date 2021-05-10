@@ -1,7 +1,6 @@
 import java.text.SimpleDateFormat
 
 apply plugin: 'maven-publish'
-apply from: "$rootDir/properties-util.gradle"
 
 static def isReleaseBuild() {
     // return true if it is a release build
